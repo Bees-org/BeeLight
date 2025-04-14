@@ -1,0 +1,14 @@
+# zig
+.zig-cache/
+zig-out/
+
+# python
+.venv/
+
+# ipython
+.ipynb_checkpoints/
+
+.cursor/
+.vscode/
+
+*.csv
