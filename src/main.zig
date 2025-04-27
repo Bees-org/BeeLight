@@ -1,9 +1,10 @@
 const std = @import("std");
-const Logger = @import("core/log.zig").Logger;
-const BrightnessController = @import("core/controller.zig").BrightnessController;
-const IpcServer = @import("ipc/server.zig").IpcServer;
-const LogConfig = @import("core/log.zig").LogConfig;
-const Config = @import("core/config.zig").BrightnessConfig;
+const lib = @import("lib");
+const Logger = lib.core.Logger;
+const BrightnessController = lib.core.BrightnessController;
+const IpcServer = lib.ipc.IpcServer;
+const LogConfig = lib.core.LogConfig;
+const Config = lib.core.Config;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

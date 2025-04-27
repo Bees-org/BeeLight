@@ -1,6 +1,6 @@
 const std = @import("std");
 const time = @import("std").time;
-const DataPoint = @import("../storage/recorder.zig").DataPoint;
+const DataPoint = @import("../model/recorder.zig").DataPoint;
 
 pub const TimeFeatures = struct {
     hour: u8,

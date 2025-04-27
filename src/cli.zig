@@ -1,6 +1,6 @@
 const std = @import("std");
 const linux = std.os.linux;
-const protocol = @import("protocol");
+const protocol = @import("ipc/protocol.zig");
 const Command = protocol.Command;
 const Response = protocol.Response;
 
