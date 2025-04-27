@@ -3,7 +3,7 @@ const time = std.time;
 const Logger = @import("log.zig").Logger;
 const math = std.math;
 
-const BacklightError = error{
+const ScreenError = error{
     FileOpenError,
     FileReadError,
     FileWriteError,
@@ -97,12 +97,12 @@ pub const Screen = struct {
 
         if (value < self.min) {
             self.log.err("亮度值过低: {} (最小值: {})", .{ value, self.min }) catch {};
-            return BacklightError.InvalidValue;
+            return ScreenError.InvalidValue;
         }
 
         if (value > self.max) {
             self.log.err("亮度值过高: {} (最大值: {})", .{ value, self.max }) catch {};
-            return BacklightError.InvalidValue;
+            return ScreenError.InvalidValue;
         }
 
         // 获取当前亮度
