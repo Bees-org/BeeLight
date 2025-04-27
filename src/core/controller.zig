@@ -6,12 +6,7 @@ const DataPoint = @import("../model/recorder.zig").DataPoint;
 const EnhancedBrightnessModel = @import("../model/enhanced_brightness_model.zig").EnhancedBrightnessModel;
 const Logger = @import("log.zig").Logger;
 const LogConfig = @import("log.zig").LogConfig;
-const EventQueue = @import("event_queue.zig").EventQueue;
-const Event = @import("event.zig").Event;
 const Config = @import("config.zig").BrightnessConfig;
-
-// 全局事件队列
-var global_event_queue: ?*EventQueue = null;
 
 pub const BrightnessController = struct {
     screen: Screen,
@@ -23,7 +18,6 @@ pub const BrightnessController = struct {
     config: Config,
     logger: *Logger,
     auto_mode: bool,
-    event_queue: EventQueue,
 
     /// 初始化亮度控制器。
     pub fn init(allocator: std.mem.Allocator, logger: *Logger, config: Config) !BrightnessController {
@@ -39,12 +33,8 @@ pub const BrightnessController = struct {
             logger.err("初始化数据记录器失败: {}", .{err}) catch {};
             return err;
         };
-        // 传入的 config 已经是加载好的
         screen.setTransitionConfig(config.transition_duration_ms, 30);
         logger.debug("已配置亮度过渡: 持续时间={}ms, 步数={}", .{ config.transition_duration_ms, 30 }) catch {};
-
-        // 初始化事件队列
-        const event_queue = EventQueue.init(allocator, logger);
 
         var controller = BrightnessController{
             .screen = screen,
@@ -56,18 +46,8 @@ pub const BrightnessController = struct {
             .config = config,
             .logger = logger,
             .auto_mode = config.auto_brightness_enabled,
-            .event_queue = event_queue,
         };
 
-        // 设置全局事件队列引用
-        global_event_queue = &controller.event_queue;
-        logger.debug("已设置全局事件队列引用", .{}) catch {};
-
-        // 设置亮度变化回调
-        screen.setOnBrightnessChange(onExternalBrightnessChange);
-        logger.debug("已设置亮度变化回调", .{}) catch {};
-
-        // 读取历史数据
         logger.info("正在读取历史数据...", .{}) catch {};
         const historical_data = data_logger.readHistoricalData() catch |err| {
             logger.err("读取历史数据失败: {}", .{err}) catch {};
@@ -115,45 +95,16 @@ pub const BrightnessController = struct {
         self.data_logger.deinit();
         self.model.deinit();
         self.logger.deinit();
-        self.event_queue.deinit();
-        global_event_queue = null;
-    }
-
-    fn onExternalBrightnessChange(brightness: i64) void {
-        if (global_event_queue) |queue| {
-            queue.push(.{ .brightness = brightness }) catch |err| {
-                queue.logger.err("添加亮度变化事件失败: {}", .{err}) catch {};
-            };
-        } else {
-            // 由于这是静态函数，我们无法直接访问logger，
-            // 这种情况应该很少发生（只有在初始化过程中可能发生）
-            std.debug.print("错误：全局事件队列未初始化\n", .{});
-        }
     }
 
     pub fn updateBrightness(self: *BrightnessController) !void {
-        // 处理事件队列中的亮度变化事件
-        const queue_length = self.event_queue.getLength();
-        if (queue_length > 0) {
-            self.logger.debug("开始处理事件队列，当前事件数: {}", .{queue_length}) catch {};
-        }
-
-        while (self.event_queue.pop()) |event| {
-            self.handleExternalBrightnessChange(event.brightness) catch |err| {
-                self.logger.err("处理外部亮度变化事件失败: {}", .{err}) catch {};
-            };
-        }
-
         if (!self.auto_mode) {
-            self.logger.debug("自动模式已关闭，跳过亮度更新", .{}) catch {};
             return;
         }
-
         const current_time = std.time.timestamp();
         const ambient_light = try self.sensor.readAmbientLight();
         const is_active = (current_time - self.last_activity_time) < self.config.activity_timeout;
         const current_brightness = try self.screen.getRaw();
-
         self.logger.debug("当前状态 - 环境光: {}, 亮度: {}, 是否活跃: {}, 距离上次活动: {}秒", .{
             ambient_light,
             current_brightness,
@@ -187,7 +138,6 @@ pub const BrightnessController = struct {
             // 使用对数映射而不是线性映射
             const ambient_f = @as(f64, @floatFromInt(ambient_light));
             var mapped_brightness: i64 = undefined;
-
             if (ambient_light < 1) {
                 mapped_brightness = self.config.min_brightness;
             } else {
@@ -198,12 +148,11 @@ pub const BrightnessController = struct {
 
                 mapped_brightness = @as(i64, @intFromFloat((log_ambient / std.math.log(f64, std.math.e, @as(f64, @floatFromInt(self.config.max_ambient_light)))) * brightness_range + min_brightness_f));
             }
-
             const clamped_brightness = @min(@max(mapped_brightness, self.config.min_brightness), self.config.max_brightness);
 
             // 只有当亮度差异超过阈值时才更新
             const brightness_diff = @abs(clamped_brightness - current_brightness);
-            const threshold = @divTrunc(self.config.max_brightness - self.config.min_brightness, 20); // 5%阈值
+            const threshold = @divTrunc(self.config.max_brightness - self.config.min_brightness, 20);
             if (brightness_diff > threshold) {
                 self.logger.debug("使用对数映射更新亮度: 当前 {} -> 目标 {}", .{ current_brightness, clamped_brightness }) catch {};
                 try self.screen.setRaw(clamped_brightness); // 使用setRaw而不是setBrightness
@@ -224,7 +173,6 @@ pub const BrightnessController = struct {
     pub fn handleUserAdjustment(self: *BrightnessController, new_brightness: i64) !void {
         const current_time = std.time.timestamp();
         const ambient_light = try self.sensor.readAmbientLight();
-
         self.logger.info("用户手动调节亮度: {}, 当前环境光: {}", .{ new_brightness, ambient_light }) catch {};
 
         // 更新最后活动时间
@@ -237,7 +185,6 @@ pub const BrightnessController = struct {
             .screen_brightness = new_brightness,
             .is_manual_adjustment = true,
         };
-
         try self.data_logger.logDataPoint(data_point);
         try self.model.train(data_point, current_time, true);
 
@@ -253,7 +200,6 @@ pub const BrightnessController = struct {
 
     pub fn setAutoMode(self: *BrightnessController, enabled: bool) !void {
         if (self.auto_mode == enabled) return;
-
         self.auto_mode = enabled;
         self.logger.info("自动亮度调节模式已{s}", .{if (enabled) "开启" else "关闭"}) catch {};
 
@@ -266,23 +212,17 @@ pub const BrightnessController = struct {
     pub fn handleExternalBrightnessChange(self: *BrightnessController, new_brightness: i64) !void {
         const current_time = std.time.timestamp();
         const ambient_light = try self.sensor.readAmbientLight();
-
         self.logger.info("检测到外部程序调节亮度: {} -> {}, 当前环境光: {}", .{ try self.screen.getRaw(), new_brightness, ambient_light }) catch {};
-
-        // 记录数据点
         const data_point = DataPoint{
             .timestamp = current_time,
             .ambient_light = ambient_light,
             .screen_brightness = new_brightness,
             .is_manual_adjustment = true,
         };
-
         self.data_logger.logDataPoint(data_point) catch |err| {
             self.logger.err("记录外部亮度调节数据失败: {}", .{err}) catch {};
             return err;
         };
-
-        // 如果在自动模式下，可能需要根据策略决定是否保持外部设置的亮度
         if (self.auto_mode) {
             self.logger.info("自动模式下检测到外部亮度变化 - 当前策略：在下次更新时调整", .{}) catch {};
         } else {

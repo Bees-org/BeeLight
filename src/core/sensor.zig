@@ -14,14 +14,14 @@ const AMBIENT_SENSOR = "/sys/bus/iio/devices/iio:device0/in_illuminance_raw";
 /// 用于读取环境光强度并处理相关错误。
 pub const Sensor = struct {
     allocator: std.mem.Allocator,
-    buffer: []u8,
+    buffer: []u8 = undefined,
     fd: std.fs.File,
     sensor_path: []const u8,
 
     /// 初始化传感器
     pub fn init() !Sensor {
         const allocator = std.heap.page_allocator;
-        const buffer = allocator.alloc(u8, 10) catch |err| {
+        const buffer = allocator.alloc(u8, 16) catch |err| {
             std.log.err("分配缓冲区失败: {}", .{err});
             return SensorError.AllocationError;
         };
