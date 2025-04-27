@@ -30,15 +30,16 @@ pub fn main() !void {
     defer controller.deinit();
 
     // 初始化IPC服务器
-    var server = try IpcServer.init(allocator, &controller);
+    var server = try IpcServer.init(allocator, &controller, &logger);
     defer server.deinit();
 
     // 启动自动亮度调节线程
     const auto_thread = try std.Thread.spawn(.{}, autoAdjustmentThread, .{&controller});
     defer auto_thread.join();
 
-    // 运行IPC服务器
-    try server.run();
+    // IPC服务器线程
+    const ipc_thread = try std.Thread.spawn(.{}, ipcServerThread, .{&server});
+    defer ipc_thread.join();
 }
 
 fn autoAdjustmentThread(controller: *BrightnessController) void {
@@ -50,4 +51,10 @@ fn autoAdjustmentThread(controller: *BrightnessController) void {
         }
         std.time.sleep(std.time.ns_per_s * 2); // 每2秒更新一次
     }
+}
+
+fn ipcServerThread(server: *IpcServer) void {
+    server.run() catch |err| {
+        server.logger.err("IPC服务器错误: {}", .{err}) catch {};
+    };
 }

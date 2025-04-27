@@ -121,7 +121,7 @@ pub const BrightnessController = struct {
 
     fn onExternalBrightnessChange(brightness: i64) void {
         if (global_event_queue) |queue| {
-            queue.push(.{ .brightness = brightness}) catch |err|{
+            queue.push(.{ .brightness = brightness }) catch |err| {
                 queue.logger.err("添加亮度变化事件失败: {}", .{err}) catch {};
             };
         } else {

@@ -1,0 +1,31 @@
+name: Zig CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 
+
+      - name: Set up Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.14.0
+
+      - name: Run zig fmt check
+        run: zig fmt --check .
+
+      - name: Build project
+        run: zig build
+
+      - name: Run tests 
+        run: zig build test

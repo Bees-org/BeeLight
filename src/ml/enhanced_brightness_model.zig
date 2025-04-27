@@ -85,7 +85,7 @@ pub const EnhancedBrightnessModel = struct {
     time_weight: f64,
     recency_weight: f64,
     activity_weight: f64,
-    last_predictions: [3]f64 = .{0,0,0},
+    last_predictions: [3]f64 = .{ 0, 0, 0 },
 
     const default_time_weight = 0.3;
     const default_recency_weight = 0.4;
@@ -140,15 +140,15 @@ pub const EnhancedBrightnessModel = struct {
         const bin_count = self.ambient_bins.len;
         for (self.ambient_bins, 0..) |*bin, i| {
             const start_idx = @divTrunc(i * ambient_list.len, bin_count);
-            const end_idx = @divTrunc((i+1) * ambient_list.len, bin_count) - 1;
+            const end_idx = @divTrunc((i + 1) * ambient_list.len, bin_count) - 1;
             bin.min_value = ambient_list[start_idx];
-            bin.max_value = ambient_list[@min(end_idx, ambient_list.len-1)];
+            bin.max_value = ambient_list[@min(end_idx, ambient_list.len - 1)];
         }
     }
 
     /// 非线性环境光映射（sigmoid）
     fn nonlinearMap(ambient: i64) f64 {
-        return 1.0 / (1.0 + std.math.exp(-@as(f64, @floatFromInt(ambient))/300.0));
+        return 1.0 / (1.0 + std.math.exp(-@as(f64, @floatFromInt(ambient)) / 300.0));
     }
 
     fn calculateWeight(
@@ -189,9 +189,9 @@ pub const EnhancedBrightnessModel = struct {
         for (self.ambient_bins) |bin| {
             if (bin.points.items.len > 0) {
                 last_point = DataPoint{
-                    .timestamp = bin.points.items[bin.points.items.len-1].timestamp,
-                    .ambient_light = bin.points.items[bin.points.items.len-1].brightness, // 近似
-                    .screen_brightness = bin.points.items[bin.points.items.len-1].brightness,
+                    .timestamp = bin.points.items[bin.points.items.len - 1].timestamp,
+                    .ambient_light = bin.points.items[bin.points.items.len - 1].brightness, // 近似
+                    .screen_brightness = bin.points.items[bin.points.items.len - 1].brightness,
                     .is_manual_adjustment = true,
                 };
             }
@@ -222,12 +222,12 @@ pub const EnhancedBrightnessModel = struct {
         is_active: bool,
     ) ?f64 {
         // 非线性预处理（如需使用 mapped_ambient，可直接替换 ambient_light）
-        // const mapped_ambient = nonlinearMap(ambient_light);
+        const mapped_ambient = nonlinearMap(ambient_light);
         // 找到主要区间
         var main_bin: ?*const AdaptiveBin = null;
         var main_bin_index: usize = 0;
         for (self.ambient_bins, 0..) |*bin, i| {
-            if (ambient_light >= bin.min_value and ambient_light < bin.max_value) {
+            if (mapped_ambient >= @as(f64, @floatFromInt(bin.min_value)) and mapped_ambient < @as(f64, @floatFromInt(bin.max_value))) {
                 main_bin = bin;
                 main_bin_index = i;
                 break;
