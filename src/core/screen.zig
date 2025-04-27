@@ -1,6 +1,7 @@
 const std = @import("std");
 const time = std.time;
 const Logger = @import("log.zig").Logger;
+const math = std.math;
 
 const BacklightError = error{
     FileOpenError,
@@ -42,7 +43,7 @@ pub const Screen = struct {
 
         const backlight_path = "/sys/class/backlight/intel_backlight/brightness";
 
-        const file = std.fs.openFileAbsolute(backlight_path, .{ .mode = .read_only }) catch |err| {
+        const file = std.fs.openFileAbsolute(backlight_path, .{ .mode = .read_write }) catch |err| {
             logger.err("打开亮度文件失败: {s}, 错误: {}", .{ backlight_path, err }) catch {};
             return err;
         };
@@ -111,32 +112,68 @@ pub const Screen = struct {
             return;
         }
 
-        // 计算过渡步骤
+        // 计算过渡步骤和时间间隔
         const step_count = self.transition_config.steps;
-        const sleep_duration = @divTrunc(self.transition_config.duration_ms * time.ns_per_ms, step_count);
-        const brightness_diff = value - current;
-        const step_size = @divTrunc(brightness_diff, @as(i64, @intCast(step_count)));
-
-        // 逐步调整亮度
-        var i: u64 = 0;
-        var current_value = current;
-        while (i < step_count) : (i += 1) {
-            current_value += step_size;
-            if (i == step_count - 1) {
-                current_value = value; // 确保最后一步达到目标亮度
-            }
-
-            const value_str = std.fmt.allocPrint(self.allocator, "{}\n", .{current_value}) catch |err| {
+        if (step_count == 0) {
+            self.log.warn("过渡步数为0，将直接设置亮度", .{}) catch {};
+            // 直接设置亮度，没有过渡
+            const value_str = std.fmt.allocPrint(self.allocator, "{}\n", .{value}) catch |err| {
                 self.log.err("格式化亮度值失败: {}", .{err}) catch {};
                 return err;
             };
+            _ = self.fd.pwrite(value_str, self.offset) catch |err| {
+                self.log.err("写入亮度值失败: {}", .{err}) catch {};
+                return err;
+            };
+            self.log.info("亮度调整完成: {} -> {}", .{ current, value }) catch {};
+            return;
+        }
+
+        const sleep_duration = @divTrunc(self.transition_config.duration_ms * time.ns_per_ms, step_count);
+
+        // 使用对数插值: 将亮度值映射到对数空间进行线性插值，再映射回线性空间
+        // 避免 log(0)，将亮度范围映射到一个小正数范围，例如 [min, max] -> [min+1, max+1]
+        const mapped_current = @as(f64, @floatFromInt(current + 1));
+        const mapped_value = @as(f64, @floatFromInt(value + 1));
+
+        const log_current = math.log2(mapped_current);
+        const log_value = math.log2(mapped_value);
+        const log_diff = log_value - log_current;
+        const log_step_size = log_diff / @as(f64, @floatFromInt(step_count));
+
+        // 逐步调整亮度
+        var i: u64 = 0;
+        while (i < step_count) : (i += 1) {
+            var target_mapped_log_brightness: f64 = undefined;
+            if (i == step_count - 1) {
+                // 确保最后一步达到目标亮度
+                target_mapped_log_brightness = log_value;
+            } else {
+                target_mapped_log_brightness = log_current + @as(f64, @floatFromInt(i + 1)) * log_step_size;
+            }
+
+            // 将对数空间的值映射回线性亮度空间
+            const current_linear_brightness_float = math.exp2(target_mapped_log_brightness) - 1;
+            // 将浮点数转换为整数，四舍五入以减少误差
+            const current_value = @as(i64, @intFromFloat(math.round(current_linear_brightness_float)));
+
+            // 确保亮度值在合法范围内 (理论上对数插值不会超出，但保险起见)
+            const clamped_value = std.math.clamp(current_value, self.min, self.max);
+
+            const value_str = std.fmt.allocPrint(self.allocator, "{}\n", .{clamped_value}) catch |err| {
+                self.log.err("格式化亮度值失败: {}", .{err}) catch {};
+                return err;
+            };
+            defer self.allocator.free(value_str); // 释放分配的字符串内存
 
             _ = self.fd.pwrite(value_str, self.offset) catch |err| {
                 self.log.err("写入亮度值失败: {}", .{err}) catch {};
                 return err;
             };
 
-            time.sleep(sleep_duration);
+            if (sleep_duration > 0) {
+                time.sleep(sleep_duration);
+            }
         }
 
         self.log.info("亮度调整完成: {} -> {}", .{ current, value }) catch {};
