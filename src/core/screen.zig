@@ -13,8 +13,8 @@ const ScreenError = error{
 };
 
 const TransitionOptions = struct {
-    duration_ms: u64 = 500,
-    steps: u64 = 20,
+    duration_ms: u64 = 2000,
+    steps: u64 = 30,
 };
 
 /// 屏幕亮度控制器
@@ -93,6 +93,7 @@ pub const Screen = struct {
 
     /// 设置亮度原始值（带过渡动画）
     pub fn setRaw(self: *Screen, value: i64) !void {
+        const start_time = time.milliTimestamp();
         self.log.debug("设置亮度值: {}", .{value}) catch {};
 
         if (value < self.min) {
@@ -176,7 +177,8 @@ pub const Screen = struct {
             }
         }
 
-        self.log.info("亮度调整完成: {} -> {}", .{ current, value }) catch {};
+        const end_time = time.milliTimestamp();
+        self.log.debug("亮度调整完成: {} -> {}, 总耗时{}ms", .{ current, value, end_time - start_time }) catch {};
     }
 
     /// 设置过渡动画参数

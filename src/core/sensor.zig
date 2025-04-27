@@ -8,11 +8,17 @@ const SensorError = error{
     AllocationError,
 };
 
+const circleData = struct {
+    data: [60]i64,
+    index: i32,
+};
+
 /// 环境光传感器管理器
 /// 用于读取环境光强度并处理相关错误。
 pub const Sensor = struct {
     allocator: std.mem.Allocator,
     buffer: []u8 = undefined,
+    history: circleData, // 历史数据
     fd: std.fs.File,
 
     /// 初始化传感器
@@ -33,6 +39,10 @@ pub const Sensor = struct {
         return Sensor{
             .buffer = buffer,
             .allocator = allocator,
+            .history = circleData{
+                .data = [_]i64{0} ** 60,
+                .index = 0,
+            },
             .fd = file,
         };
     }

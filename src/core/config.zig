@@ -29,7 +29,7 @@ pub const BrightnessConfig = struct {
     bin_count: usize = 10,
     activity_timeout: i64 = 300, // 5分钟无操作视为不活跃
     update_interval_ms: i64 = 50,
-    transition_duration_ms: u64 = 200,
+    transition_duration_ms: u64 = 2000,
 
     // 平滑过渡设置
     transition_enabled: bool = true,
