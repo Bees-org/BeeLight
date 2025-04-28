@@ -107,14 +107,15 @@ pub const Screen = struct {
         }
 
         // 获取当前亮度
-        const current = try self.getRaw();
+        const current: i64 = try self.getRaw();
         if (current == value) {
             self.log.debug("亮度值未变化，无需调整", .{}) catch {};
             return;
         }
 
         // 计算过渡步骤和时间间隔
-        const step_count = self.transition_config.steps;
+        const diff: f64 = @as(f64, @floatFromInt(@abs(value - current))) / @as(f64, @floatFromInt(self.max - self.min)) * 100.0 / 2.0;
+        const step_count = self.transition_config.steps + @as(u64, @intFromFloat(diff));
         if (step_count == 0) {
             self.log.warn("过渡步数为0，将直接设置亮度", .{}) catch {};
             // 直接设置亮度，没有过渡
