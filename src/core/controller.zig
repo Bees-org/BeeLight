@@ -21,7 +21,7 @@ pub const BrightnessController = struct {
 
     /// 初始化亮度控制器。
     pub fn init(allocator: std.mem.Allocator, logger: *Logger, config: Config) !BrightnessController {
-        var screen = Screen.init(logger) catch |err| {
+        var screen = Screen.init(logger, "intel_backlight") catch |err| {
             logger.err("初始化屏幕控制器失败: {}", .{err}) catch {};
             return err;
         };
