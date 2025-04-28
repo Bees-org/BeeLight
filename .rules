@@ -1,7 +1,11 @@
-# Zig coding guidelines
+# Zig 编程指南
 
-* Prioritize code correctness and clarity. Speed and efficiency are secondary priorities unless otherwise specified.
-* Do not write organizational or comments that summarize the code. Comments should only be written in order to explain "why" the code is written in some way in the case there is a reason that is tricky / non-obvious.
-* Prefer implementing functionality in existing files unless it is a new logical component. Avoid creating many small files.
-* Be careful with operations like indexing which may panic if the indexes are out of bounds.
-* Always use zig latest version which is 0.14.0.
+* **代码清晰度和正确性优先**: 除非特别指出，否则代码的清晰度和正确性应优先于性能和效率。
+* **错误处理**: 优先使用显式的错误返回 (`try`/`catch` 和错误集) 来处理可恢复的错误，避免不必要的 `panic`。
+* **内存管理**: 谨慎处理内存分配。明确分配器的传递和所有权，确保及时释放不再使用的内存。
+* **注释**: 仅对复杂、非显而易见或需要解释"为什么"这样设计的代码段添加注释。避免总结性或解释"是什么"的注释。
+* **文件结构**: 优先在现有文件中实现功能，除非是明确独立的逻辑组件。避免创建过多的小文件。
+* **避免恐慌 (Panic)**: 特别注意可能导致恐慌的操作（如数组索引越界、整数溢出等），并添加必要的检查或使用安全的替代方案。
+* **命名规范**: 遵循 Zig 社区通用的命名约定（例如，变量和函数使用 `snake_case`，类型使用 `PascalCase`）。
+* **代码格式化**: 使用 `zig fmt` 统一代码风格。
+* **Zig 版本**: 始终使用 Zig 0.14.0 版本进行开发和构建。
