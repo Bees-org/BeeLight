@@ -9,11 +9,6 @@ pub const core = struct {
     pub const Logger = @import("core/log.zig").Logger;
 };
 
-pub const model = struct {
-    pub const EnhancedBrightnessModel = @import("model/enhanced_brightness_model.zig").EnhancedBrightnessModel;
-    pub const DataLogger = @import("model/recorder.zig").DataLogger;
-};
-
 pub const ipc = struct {
     pub const IpcServer = @import("ipc/server.zig").IpcServer;
 };

@@ -166,6 +166,7 @@ pub const Screen = struct {
 
     /// 初始化屏幕控制器
     /// backlight_device: 例如 "intel_backlight" 或 "amdgpu_bl0"
+    /// TODO: device 参数应该从配置文件中读取
     pub fn init(logger: *Logger, backlight_device: []const u8) !Screen {
         logger.info("初始化屏幕控制器 (设备: {s})...", .{backlight_device}) catch {};
         const allocator = std.heap.page_allocator; // 或者传入 allocator
@@ -271,7 +272,7 @@ pub const Screen = struct {
         const step_count = self.transition_config.steps + @as(u64, @intFromFloat(diff)); // 示例调整方式
         // const step_count = self.transition_config.steps; // 简化：使用固定步数
 
-        self.log.info("过渡步数: {}", .{step_count}) catch {};
+        self.log.debug("过渡步数: {}", .{step_count}) catch {};
         if (step_count == 0) {
             self.log.warn("过渡步数为0，将直接设置亮度", .{}) catch {};
             try self.controller.setRaw(value);
