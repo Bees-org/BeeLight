@@ -1,6 +1,7 @@
 const std = @import("std");
 const time = @import("std").time;
 const DataPoint = @import("../model/recorder.zig").DataPoint;
+const Config = @import("../core/config.zig").BrightnessConfig;
 
 pub const TimeFeatures = struct {
     hour: u8,
@@ -84,6 +85,7 @@ pub const EnhancedBrightnessModel = struct {
     ambient_bins: []AdaptiveBin,
     time_weight: f64,
     recency_weight: f64,
+    config: Config,
     activity_weight: f64,
     last_predictions: [3]f64 = .{ 0, 0, 0 },
 
@@ -93,6 +95,7 @@ pub const EnhancedBrightnessModel = struct {
 
     pub fn init(
         allocator: std.mem.Allocator,
+        config: Config,
         min_ambient: i64,
         max_ambient: i64,
         bin_count: usize,
@@ -108,6 +111,7 @@ pub const EnhancedBrightnessModel = struct {
 
         return .{
             .allocator = allocator,
+            .config = config,
             .ambient_bins = bins,
             .time_weight = default_time_weight,
             .recency_weight = default_recency_weight,
@@ -220,7 +224,7 @@ pub const EnhancedBrightnessModel = struct {
         ambient_light: i64,
         timestamp: i64,
         is_active: bool,
-    ) ?f64 {
+    ) ?i64 {
         // 非线性预处理（如需使用 mapped_ambient，可直接替换 ambient_light）
         const mapped_ambient = nonlinearMap(ambient_light);
         // 找到主要区间
@@ -234,10 +238,29 @@ pub const EnhancedBrightnessModel = struct {
             }
         }
 
-        if (main_bin == null) return null;
+        if (main_bin == null) {
+            return null;
+        }
 
         // 获取主区间的预测值
-        const main_prediction = main_bin.?.getWeightedAverage() orelse return null;
+        const main_prediction = main_bin.?.getWeightedAverage() orelse {
+            std.debug.print("主区间无数据，使用对数映射\n", .{});
+            // 使用对数映射而不是线性映射
+            const ambient_f = @as(f64, @floatFromInt(ambient_light));
+            var mapped_brightness: i64 = undefined;
+            if (ambient_light < 1) {
+                mapped_brightness = self.config.min_brightness;
+            } else {
+                // 使用对数函数进行映射，提供更好的低光照响应
+                const log_ambient = std.math.log(f64, std.math.e, ambient_f);
+                const brightness_range = @as(f64, @floatFromInt(self.config.max_brightness - self.config.min_brightness));
+                const min_brightness_f = @as(f64, @floatFromInt(self.config.min_brightness));
+
+                mapped_brightness = @as(i64, @intFromFloat((log_ambient / std.math.log(f64, std.math.e, @as(f64, @floatFromInt(self.config.max_ambient_light)))) * brightness_range + min_brightness_f));
+            }
+            std.debug.print("使用对数映射，映射值：{d}\n", .{mapped_brightness});
+            return @as(i64, mapped_brightness);
+        };
 
         // 应用时间和活动状态的调整因子
         const time_features = TimeFeatures.fromTimestamp(timestamp);
@@ -273,7 +296,7 @@ pub const EnhancedBrightnessModel = struct {
         self_mut.last_predictions[0] = self_mut.last_predictions[1];
         self_mut.last_predictions[1] = self_mut.last_predictions[2];
         self_mut.last_predictions[2] = adjusted_prediction;
-        return (self_mut.last_predictions[0] + self_mut.last_predictions[1] + self_mut.last_predictions[2]) / 3.0;
+        return @as(i64, @intFromFloat((self_mut.last_predictions[0] + self_mut.last_predictions[1] + self_mut.last_predictions[2]) / 3.0));
     }
 
     /// 清理过期数据

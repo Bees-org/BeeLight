@@ -59,6 +59,7 @@ pub const BrightnessController = struct {
         // 初始化增强亮度模型
         var model = EnhancedBrightnessModel.init(
             allocator,
+            config,
             config.min_ambient_light,
             config.max_ambient_light,
             config.bin_count,
@@ -112,10 +113,9 @@ pub const BrightnessController = struct {
             current_time - self.last_activity_time,
         }) catch {};
 
-        // 获取模型预测的亮度
+        // 获取模型映射的亮度
         if (self.model.predict(ambient_light, current_time, is_active)) |predicted_brightness| {
-            const raw_brightness = @as(i64, @intFromFloat(predicted_brightness * @as(f64, @floatFromInt(self.config.max_brightness - self.config.min_brightness)) / 100.0)) + self.config.min_brightness;
-            const clamped_brightness = @min(@max(raw_brightness, self.config.min_brightness), self.config.max_brightness);
+            const clamped_brightness = @min(@max(predicted_brightness, self.config.min_brightness), self.config.max_brightness);
 
             // 只有当亮度差异超过阈值时才更新
             const brightness_diff = @abs(clamped_brightness - current_brightness);
@@ -135,38 +135,7 @@ pub const BrightnessController = struct {
                 self.logger.debug("亮度变化不大，保持当前值: {}", .{current_brightness}) catch {};
             }
         } else {
-            // 使用对数映射而不是线性映射
-            const ambient_f = @as(f64, @floatFromInt(ambient_light));
-            var mapped_brightness: i64 = undefined;
-            if (ambient_light < 1) {
-                mapped_brightness = self.config.min_brightness;
-            } else {
-                // 使用对数函数进行映射，提供更好的低光照响应
-                const log_ambient = std.math.log(f64, std.math.e, ambient_f);
-                const brightness_range = @as(f64, @floatFromInt(self.config.max_brightness - self.config.min_brightness));
-                const min_brightness_f = @as(f64, @floatFromInt(self.config.min_brightness));
-
-                mapped_brightness = @as(i64, @intFromFloat((log_ambient / std.math.log(f64, std.math.e, @as(f64, @floatFromInt(self.config.max_ambient_light)))) * brightness_range + min_brightness_f));
-            }
-            const clamped_brightness = @min(@max(mapped_brightness, self.config.min_brightness), self.config.max_brightness);
-
-            // 只有当亮度差异超过阈值时才更新
-            const brightness_diff = @abs(clamped_brightness - current_brightness);
-            const threshold = @divTrunc(self.config.max_brightness - self.config.min_brightness, 20);
-            if (brightness_diff > threshold) {
-                self.logger.debug("使用对数映射更新亮度: 当前 {} -> 目标 {}", .{ current_brightness, clamped_brightness }) catch {};
-                try self.screen.setRaw(clamped_brightness); // 使用setRaw而不是setBrightness
-
-                // 记录数据点
-                try self.data_logger.logDataPoint(.{
-                    .timestamp = current_time,
-                    .ambient_light = ambient_light,
-                    .screen_brightness = clamped_brightness,
-                    .is_manual_adjustment = false,
-                });
-            } else {
-                self.logger.debug("亮度变化不大，保持当前值: {}", .{current_brightness}) catch {};
-            }
+            self.logger.debug("模型预测失败，保持当前亮度: {}", .{current_brightness}) catch {};
         }
     }
 
