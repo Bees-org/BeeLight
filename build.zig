@@ -5,7 +5,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // 创建库模块
-    const lib = b.addModule("lib", .{
+    const lib = b.createModule(.{
         .root_source_file = b.path("src/lib.zig"),
         .target = target,
         .optimize = optimize,
@@ -35,7 +35,6 @@ pub fn build(b: *std.Build) void {
     check.dependOn(&daemon.step);
     check.dependOn(&cli.step);
 
-    // 安装两个可执行文件
     b.installArtifact(daemon);
     b.installArtifact(cli);
 }

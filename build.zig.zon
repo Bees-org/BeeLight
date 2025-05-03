@@ -37,12 +37,12 @@
     // internet connectivity.
     .dependencies = .{},
     .paths = .{
+        "LICENSE",
+        "Makefile",
+        "README.md",
         "build.zig",
         "build.zig.zon",
-        "src",
-        "README.md",
-        "LICENSE",
         "install.sh",
-        "Makefile",
+        "src",
     },
 }
