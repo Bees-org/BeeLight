@@ -163,6 +163,7 @@ pub const Screen = struct {
     transition_config: TransitionOptions,
     last_brightness: i64, // 缓存最后一次成功获取或设置的亮度
     log: *Logger,
+    locked: bool = false,
 
     /// 初始化屏幕控制器
     /// backlight_device: 例如 "intel_backlight" 或 "amdgpu_bl0"
@@ -219,6 +220,16 @@ pub const Screen = struct {
         // 目前使用 page_allocator，不需要释放
     }
 
+    pub fn lock(self: *Screen) void {
+        self.log.debug("锁定亮度控制器", .{}) catch {};
+        self.locked = true;
+    }
+
+    pub fn unlock(self: *Screen) void {
+        self.log.debug("解锁亮度控制器", .{}) catch {};
+        self.locked = false;
+    }
+
     /// 获取当前亮度原始值 (通过底层控制器)
     pub fn getRaw(self: *Screen) !i64 {
         self.log.debug("读取当前亮度值 (通过控制器)", .{}) catch {};
@@ -233,6 +244,13 @@ pub const Screen = struct {
 
     /// 设置亮度原始值（带过渡动画）
     pub fn setRaw(self: *Screen, value: i64) !void {
+        if (self.locked) {
+            self.log.warn("亮度控制器已锁定，无法设置亮度", .{}) catch {};
+            return;
+        }
+        self.lock();
+        defer self.unlock();
+
         const start_time = time.milliTimestamp();
         self.log.debug("请求设置亮度值: {}", .{value}) catch {};
 
