@@ -1,0 +1,13 @@
+.{
+    .name = .ckdl,
+    .version = "0.1.0",
+    .fingerprint = 0x9c020e0efa72e3e,
+    .minimum_zig_version = "0.14.0",
+    .dependencies = .{
+        .ckdl = .{
+            .url = "https://github.com/tjol/ckdl/archive/refs/tags/1.0.tar.gz",
+            .hash = "N-V-__8AAIUjBQDxqUrvA7_b-RDtfFUBrlTSF_hEWKk_5_Kx",
+        },
+    },
+    .paths = .{""},
+}
