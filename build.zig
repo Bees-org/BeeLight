@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
     });
     cli.linkLibC();
 
-    const check = b.step("check", .{});
+    const check = b.step("check", "Chech the code.");
     check.dependOn(&daemon.step);
     check.dependOn(&cli.step);
 
