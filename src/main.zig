@@ -44,13 +44,17 @@ pub fn main() !void {
 }
 
 fn autoAdjustmentThread(controller: *BrightnessController) void {
+    var sleep_time: u64 = std.time.ns_per_s * 2; // 每2秒更新一次
     while (true) {
         if (controller.auto_mode) {
+            sleep_time = std.time.ns_per_s * 2;
             controller.updateBrightness() catch |err| {
                 controller.logger.err("自动亮度调节错误: {}", .{err}) catch {};
             };
+        } else {
+            sleep_time = std.time.ns_per_s * 5;
         }
-        std.time.sleep(std.time.ns_per_s * 2); // 每2秒更新一次
+        std.time.sleep(sleep_time); // 每2秒更新一次
     }
 }
 

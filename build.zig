@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) void {
     });
     cli.linkLibC();
 
-    const check = b.step("check", "Check if foo compiles");
+    const check = b.step("check", .{});
     check.dependOn(&daemon.step);
     check.dependOn(&cli.step);
 
