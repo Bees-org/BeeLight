@@ -5,8 +5,13 @@ pub const core = struct {
     pub const Config = @import("core/config.zig").BrightnessConfig;
     pub const Screen = @import("core/screen.zig").Screen;
     pub const Sensor = @import("core/sensor.zig").Sensor;
-    pub const LogConfig = @import("core/log.zig").LogConfig;
+    pub const LogOption = @import("core/log.zig").LogOption;
     pub const Logger = @import("core/log.zig").Logger;
+};
+
+pub const model = struct {
+    pub const Model = @import("model/brightness_model.zig").BrightnessModel;
+    pub const DataPoint = @import("model/recorder.zig").DataPoint;
 };
 
 pub const ipc = struct {

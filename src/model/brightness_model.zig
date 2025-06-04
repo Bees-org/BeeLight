@@ -80,7 +80,7 @@ pub const AdaptiveBin = struct {
 };
 
 /// 增强亮度模型（Adaptive Binning）
-pub const EnhancedBrightnessModel = struct {
+pub const BrightnessModel = struct {
     allocator: std.mem.Allocator,
     ambient_bins: []AdaptiveBin,
     time_weight: f64,
@@ -99,7 +99,7 @@ pub const EnhancedBrightnessModel = struct {
         min_ambient: i64,
         max_ambient: i64,
         bin_count: usize,
-    ) !EnhancedBrightnessModel {
+    ) !BrightnessModel {
         var bins = try allocator.alloc(AdaptiveBin, bin_count);
         const bin_size = @divFloor(max_ambient - min_ambient, @as(i64, @intCast(bin_count)));
 
@@ -119,7 +119,7 @@ pub const EnhancedBrightnessModel = struct {
         };
     }
 
-    pub fn deinit(self: *EnhancedBrightnessModel) void {
+    pub fn deinit(self: *BrightnessModel) void {
         for (self.ambient_bins) |*bin| {
             bin.deinit();
         }
@@ -135,7 +135,7 @@ pub const EnhancedBrightnessModel = struct {
     }
 
     /// 自适应分箱（基于历史数据分位数）
-    pub fn adaptBins(self: *EnhancedBrightnessModel, historical: []DataPoint) !void {
+    pub fn adaptBins(self: *BrightnessModel, historical: []DataPoint) !void {
         if (historical.len < 10) return; // 数据太少不自适应
         var ambient_list = try self.allocator.alloc(i64, historical.len);
         defer self.allocator.free(ambient_list);
@@ -156,7 +156,7 @@ pub const EnhancedBrightnessModel = struct {
     }
 
     fn calculateWeight(
-        self: *const EnhancedBrightnessModel,
+        self: *const BrightnessModel,
         current_time: TimeFeatures,
         point_time: TimeFeatures,
         time_diff_seconds: i64,
@@ -182,7 +182,7 @@ pub const EnhancedBrightnessModel = struct {
     }
 
     pub fn train(
-        self: *EnhancedBrightnessModel,
+        self: *BrightnessModel,
         data_point: DataPoint,
         current_timestamp: i64,
         is_active: bool,
@@ -220,9 +220,8 @@ pub const EnhancedBrightnessModel = struct {
     }
 
     pub fn predict(
-        self: *const EnhancedBrightnessModel,
+        self: *const BrightnessModel,
         ambient_light: i64,
-        timestamp: i64,
         is_active: bool,
     ) ?i64 {
         // 非线性预处理（如需使用 mapped_ambient，可直接替换 ambient_light）
@@ -263,7 +262,7 @@ pub const EnhancedBrightnessModel = struct {
         };
 
         // 应用时间和活动状态的调整因子
-        const time_features = TimeFeatures.fromTimestamp(timestamp);
+        const time_features = TimeFeatures.fromTimestamp(std.time.timestamp());
         const time_factor: f64 = if (time_features.is_day) 1.0 else 0.8;
         const activity_factor: f64 = if (is_active) 1.0 else 0.9;
 
@@ -300,7 +299,7 @@ pub const EnhancedBrightnessModel = struct {
     }
 
     /// 清理过期数据
-    pub fn cleanup(self: *EnhancedBrightnessModel, current_timestamp: i64) void {
+    pub fn cleanup(self: *BrightnessModel, current_timestamp: i64) void {
         const max_age = 7 * 24 * 3600; // 一周
         for (self.ambient_bins) |*bin| {
             var i: usize = 0;

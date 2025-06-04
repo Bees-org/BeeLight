@@ -31,10 +31,21 @@ pub fn build(b: *std.Build) void {
     });
     cli.linkLibC();
 
+    // export data
+    const data = b.addExecutable(.{
+        .name = "exporter",
+        .root_source_file = b.path("src/data.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    daemon.linkLibC();
+    daemon.root_module.addImport("lib", lib);
+
     const check = b.step("check", "Chech the code.");
     check.dependOn(&daemon.step);
     check.dependOn(&cli.step);
 
     b.installArtifact(daemon);
     b.installArtifact(cli);
+    b.installArtifact(data);
 }

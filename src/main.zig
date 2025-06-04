@@ -1,9 +1,11 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
 const lib = @import("lib");
 const Logger = lib.core.Logger;
 const BrightnessController = lib.core.BrightnessController;
 const IpcServer = lib.ipc.IpcServer;
-const LogConfig = lib.core.LogConfig;
+const LogOption = lib.core.LogOption;
 const Config = lib.core.Config;
 
 pub fn main() !void {
@@ -12,13 +14,16 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // 初始化日志系统
-    const log_config = LogConfig{
+    const log_option = LogOption{
         .log_file_path = null, // 使用默认路径
-        .min_level = .Debug,
+        .min_level = switch (comptime builtin.mode) {
+            .Debug => .Debug,
+            else => .Info,
+        },
         .enable_console = true,
         .enable_file = true,
     };
-    var logger = try Logger.init(allocator, log_config);
+    var logger = try Logger.init(allocator, log_option);
 
     // 加载配置
     const config = Config.load() catch |err| {

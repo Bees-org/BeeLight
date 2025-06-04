@@ -32,7 +32,7 @@ pub const LogLevel = enum {
 };
 
 /// 日志配置
-pub const LogConfig = struct {
+pub const LogOption = struct {
     /// 日志文件路径，如果为 null，则使用默认路径
     log_file_path: ?[]const u8 = null,
     /// 最小日志级别
@@ -66,19 +66,19 @@ pub const Logger = struct {
     const Self = @This();
 
     allocator: mem.Allocator,
-    config: LogConfig,
+    config: LogOption,
     file: ?fs.File,
     mutex: std.Thread.Mutex,
     current_file_size: usize,
 
     /// 初始化 Logger
-    pub fn init(allocator: mem.Allocator, config: LogConfig) !Self {
+    pub fn init(allocator: mem.Allocator, config: LogOption) !Self {
         var file: ?fs.File = null;
         if (config.enable_file) {
             const log_path = if (config.log_file_path) |path|
                 try allocator.dupe(u8, path)
             else
-                try LogConfig.getDefaultLogPath(allocator);
+                try LogOption.getDefaultLogPath(allocator);
             defer allocator.free(log_path);
 
             // 确保日志目录存在
@@ -210,7 +210,7 @@ pub const Logger = struct {
         const log_path = if (self.config.log_file_path) |path|
             try self.allocator.dupe(u8, path)
         else
-            try LogConfig.getDefaultLogPath(self.allocator);
+            try LogOption.getDefaultLogPath(self.allocator);
         defer self.allocator.free(log_path);
 
         // 关闭当前日志文件
@@ -245,5 +245,5 @@ pub const Logger = struct {
 };
 
 pub fn getLogger() Logger {
-    return Logger.init(std.heap.page_allocator, LogConfig{});
+    return Logger.init(std.heap.page_allocator, LogOption{});
 }

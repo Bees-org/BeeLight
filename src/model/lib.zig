@@ -1,1 +1,1 @@
-pub const Model = @import("model/enhanced_brightness_model.zig").EnhancedBrightnessModel;
+pub const Model = @import("model/brightness_model.zig").EnhancedBrightnessModel;

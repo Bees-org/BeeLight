@@ -3,16 +3,16 @@ const Screen = @import("screen.zig").Screen;
 const Sensor = @import("sensor.zig").Sensor;
 const DataLogger = @import("../model/recorder.zig").DataLogger;
 const DataPoint = @import("../model/recorder.zig").DataPoint;
-const EnhancedBrightnessModel = @import("../model/enhanced_brightness_model.zig").EnhancedBrightnessModel;
+const Model = @import("../model/brightness_model.zig").BrightnessModel;
 const Logger = @import("log.zig").Logger;
-const LogConfig = @import("log.zig").LogConfig;
+const LogOption = @import("log.zig").LogOption;
 const Config = @import("config.zig").BrightnessConfig;
 
 pub const BrightnessController = struct {
     screen: Screen,
     sensor: Sensor,
     data_logger: DataLogger,
-    model: EnhancedBrightnessModel,
+    model: Model,
     last_activity_time: i64,
     allocator: std.mem.Allocator,
     config: Config,
@@ -57,7 +57,7 @@ pub const BrightnessController = struct {
         logger.info("已读取 {} 条历史数据", .{historical_data.len}) catch {};
 
         // 初始化增强亮度模型
-        var model = EnhancedBrightnessModel.init(
+        var model = Model.init(
             allocator,
             config,
             config.min_ambient_light,
@@ -114,7 +114,7 @@ pub const BrightnessController = struct {
         }) catch {};
 
         // 获取模型映射的亮度
-        if (self.model.predict(ambient_light, current_time, is_active)) |predicted_brightness| {
+        if (self.model.predict(ambient_light, is_active)) |predicted_brightness| {
             const clamped_brightness = @min(@max(predicted_brightness, self.config.min_brightness), self.config.max_brightness);
 
             // 只有当亮度差异超过阈值时才更新

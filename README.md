@@ -19,7 +19,7 @@
 
 ## 项目结构
 
-```txt
+```
 ├── build.zig # Zig 构建系统脚本
 ├── build.zig.zon # 构建依赖文件
 ├── Makefile # 便捷构建命令 (可选)
@@ -101,7 +101,6 @@ sudo make install
 构建并安装后，可以尝试运行 BeeLight 服务（具体名称可能取决于构建配置）：
 
 ```bash
-# 假设可执行文件名为 beelightd
 beelightd
 ```
 

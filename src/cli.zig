@@ -137,7 +137,7 @@ pub fn main() !void {
             .auto_mode => |enabled| std.debug.print("自动模式: {s}\n", .{if (enabled) "开启" else "关闭"}),
             .stats => |s| std.debug.print(
                 \\统计信息:
-                \\当前环境光: {d:.2}
+                \\当前环境光: {d}
                 \\当前亮度: {d}%
                 \\自动模式: {s}
                 \\

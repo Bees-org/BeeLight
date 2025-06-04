@@ -14,12 +14,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
       - name: Set up Zig
-        uses: goto-bus-stop/setup-zig@v2
+        uses: mlugg/setup-zig@v2
         with:
-          version: 0.14.0
+          version: 0.14.1
 
       - name: Run zig fmt check
         run: zig fmt --check .
@@ -27,5 +27,6 @@ jobs:
       - name: Build project
         run: zig build
 
-      - name: Run tests 
+      - name: Run tests
         run: zig build test
+
